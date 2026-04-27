@@ -1,25 +1,34 @@
 package org.example;
 
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-import java.awt.*;
+import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.*;
+import javafx.stage.Stage;
+
 import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.List;
 
-public class LibraryApp extends JFrame {
+public class LibraryApp extends Application {
 
     private static final String SAVE_FILE = "library_data.ser";
     private static final SimpleDateFormat SDF = new SimpleDateFormat("yyyy-MM-dd");
 
-    // ── Shared data ─────────────────────────────────────────────────────────
+    // ── Shared data ──────────────────────────────────────────────────────────
     private static Library library;
     private static Librarian adminLibrarian;
 
     static {
         library = loadLibrary();
         if (library == null) {
-            // First run — seed default data
             library = new Library("City Library");
             adminLibrarian = new Librarian("Admin", "admin@library.com", "555-0000", "admin");
             library.addLibrarian(adminLibrarian);
@@ -34,7 +43,6 @@ public class LibraryApp extends JFrame {
             library.addMember(new Member("Alice Smith", "alice@example.com", "555-1111", "pass1"));
             library.addMember(new Member("Bob Jones", "bob@example.com", "555-2222", "pass2"));
         } else {
-            // Restore admin reference from loaded data
             adminLibrarian = library.getLibrarians().isEmpty() ? null : library.getLibrarians().get(0);
         }
         Notification.send("Library system started.");
@@ -62,539 +70,542 @@ public class LibraryApp extends JFrame {
 
     // ── Current session ──────────────────────────────────────────────────────
     private Account currentUser = null;
+    private Stage primaryStage;
 
-    // ── Root panel (CardLayout: login / main) ────────────────────────────────
-    private final CardLayout cardLayout = new CardLayout();
-    private final JPanel rootPanel = new JPanel(cardLayout);
+    @Override
+    public void start(Stage stage) {
+        this.primaryStage = stage;
+        stage.setTitle("Library Management System");
+        stage.setOnCloseRequest(e -> { saveLibrary(); Platform.exit(); });
+        showLoginScreen();
+        stage.show();
+    }
 
-    public LibraryApp() {
-        super("Library Management System");
-        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-        addWindowListener(new java.awt.event.WindowAdapter() {
-            public void windowClosing(java.awt.event.WindowEvent e) {
-                saveLibrary();
-                dispose();
-                System.exit(0);
-            }
-        });
-        setSize(980, 660);
-        setLocationRelativeTo(null);
+    // ════════════════════════════════════════════════════════════════════════
+    // SCREENS
+    // ════════════════════════════════════════════════════════════════════════
+    private void showLoginScreen() {
+        primaryStage.setScene(new Scene(buildLoginPane(), 980, 660));
+    }
 
-        rootPanel.add(buildLoginPanel(), "LOGIN");
-        // Main panel built after login so it knows the role
-        add(rootPanel);
-        cardLayout.show(rootPanel, "LOGIN");
+    private void showMainScreen() {
+        primaryStage.setScene(new Scene(buildMainPane(), 980, 660));
     }
 
     // ════════════════════════════════════════════════════════════════════════
     // LOGIN PANEL
     // ════════════════════════════════════════════════════════════════════════
-    private JPanel buildLoginPanel() {
-        JPanel outer = new JPanel(new GridBagLayout());
-        JPanel form  = new JPanel(new GridBagLayout());
-        form.setBorder(BorderFactory.createTitledBorder("Library Management System — Login"));
-        form.setPreferredSize(new Dimension(340, 220));
+    private Pane buildLoginPane() {
+        GridPane form = new GridPane();
+        form.setHgap(10); form.setVgap(10);
+        form.setPadding(new Insets(20));
+        form.setAlignment(Pos.CENTER);
 
-        GridBagConstraints g = new GridBagConstraints();
-        g.insets = new Insets(8, 8, 8, 8);
-        g.fill   = GridBagConstraints.HORIZONTAL;
+        ComboBox<String> roleBox = new ComboBox<>(FXCollections.observableArrayList("Member", "Librarian"));
+        roleBox.setValue("Member");
+        TextField emailField = new TextField();
+        PasswordField passField = new PasswordField();
+        Button btnLogin = new Button("Login");
+        btnLogin.setMaxWidth(Double.MAX_VALUE);
+        Label statusLabel = new Label();
+        statusLabel.setStyle("-fx-text-fill: red;");
 
-        String[] roles = {"Member", "Librarian"};
-        JComboBox<String> roleBox = new JComboBox<>(roles);
-        JTextField emailField     = new JTextField(18);
-        JPasswordField passField  = new JPasswordField(18);
-        JButton btnLogin          = new JButton("Login");
-        JLabel  statusLabel       = new JLabel(" ");
-        statusLabel.setForeground(Color.RED);
+        form.add(new Label("Role:"),     0, 0); form.add(roleBox,     1, 0);
+        form.add(new Label("Email:"),    0, 1); form.add(emailField,  1, 1);
+        form.add(new Label("Password:"), 0, 2); form.add(passField,   1, 2);
+        GridPane.setColumnSpan(btnLogin, 2);
+        form.add(btnLogin,    0, 3);
+        GridPane.setColumnSpan(statusLabel, 2);
+        form.add(statusLabel, 0, 4);
 
-        g.gridx = 0; g.gridy = 0; form.add(new JLabel("Role:"),     g);
-        g.gridx = 1;               form.add(roleBox,                 g);
-        g.gridx = 0; g.gridy = 1; form.add(new JLabel("Email:"),    g);
-        g.gridx = 1;               form.add(emailField,              g);
-        g.gridx = 0; g.gridy = 2; form.add(new JLabel("Password:"), g);
-        g.gridx = 1;               form.add(passField,               g);
-        g.gridx = 0; g.gridy = 3; g.gridwidth = 2; form.add(btnLogin,     g);
-        g.gridy = 4;               form.add(statusLabel,             g);
+        form.setStyle("-fx-border-color: #aaa; -fx-border-radius: 6; -fx-background-color: white; -fx-background-radius: 6;");
+        form.setMaxSize(320, 240);
 
-        btnLogin.addActionListener(e -> {
-            String role  = (String) roleBox.getSelectedItem();
+        btnLogin.setOnAction(e -> {
+            String role  = roleBox.getValue();
             String email = emailField.getText().trim();
-            String pass  = new String(passField.getPassword());
+            String pass  = passField.getText();
 
             if ("Librarian".equals(role)) {
                 Account found = library.getLibrarians().stream()
                         .filter(l -> l.getEmail().equalsIgnoreCase(email) && l.password.equals(pass))
                         .findFirst().orElse(null);
-                if (found != null) { doLogin(found); }
-                else { statusLabel.setText("Invalid librarian credentials."); }
+                if (found != null) doLogin(found);
+                else statusLabel.setText("Invalid librarian credentials.");
             } else {
                 Account found = library.getMembers().stream()
                         .filter(m -> m.getEmail().equalsIgnoreCase(email) && m.password.equals(pass))
                         .findFirst().orElse(null);
                 if (found != null) {
-                    if (found.status == AccountStatus.BLACKLISTED) {
-                        statusLabel.setText("Account is blacklisted.");
-                    } else { doLogin(found); }
-                } else { statusLabel.setText("Invalid member credentials."); }
+                    if (found.status == AccountStatus.BLACKLISTED) statusLabel.setText("Account is blacklisted.");
+                    else doLogin(found);
+                } else statusLabel.setText("Invalid member credentials.");
             }
         });
 
-        outer.add(form);
-        return outer;
+        StackPane root = new StackPane(form);
+        root.setStyle("-fx-background-color: #f0f0f0;");
+        return root;
     }
 
     private void doLogin(Account user) {
         currentUser = user;
         Notification.send("Logged in: " + user.getName() + " (" + (user instanceof Librarian ? "Librarian" : "Member") + ")");
-        rootPanel.add(buildMainPanel(), "MAIN");
-        cardLayout.show(rootPanel, "MAIN");
+        showMainScreen();
     }
 
     // ════════════════════════════════════════════════════════════════════════
     // MAIN PANEL (role-aware)
     // ════════════════════════════════════════════════════════════════════════
-    private JPanel buildMainPanel() {
+    private Pane buildMainPane() {
         boolean isLibrarian = currentUser instanceof Librarian;
 
-        JTabbedPane tabs = new JTabbedPane();
-        tabs.addTab("Books",           buildBooksTab(isLibrarian));
-        tabs.addTab("Checkout/Return", buildCheckoutTab());
-        tabs.addTab("Reservations",    buildReservationsTab());
-        tabs.addTab("Notifications",   buildNotificationsTab());
-        if (isLibrarian) {
-            tabs.addTab("Members", buildMembersTab());
-        } else {
-            tabs.addTab("My Account", buildMyAccountTab((Member) currentUser));
-        }
+        TabPane tabs = new TabPane();
+        tabs.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+        tabs.getTabs().add(new Tab("Books",           buildBooksTab(isLibrarian)));
+        tabs.getTabs().add(new Tab("Checkout/Return", buildCheckoutTab()));
+        tabs.getTabs().add(new Tab("Reservations",    buildReservationsTab()));
+        tabs.getTabs().add(new Tab("Notifications",   buildNotificationsTab()));
+        if (isLibrarian) tabs.getTabs().add(new Tab("Members",    buildMembersTab()));
+        else             tabs.getTabs().add(new Tab("My Account", buildMyAccountTab((Member) currentUser)));
 
-        // Top bar with user info + logout
-        JPanel topBar = new JPanel(new BorderLayout());
         String role = isLibrarian ? "Librarian" : "Member";
-        JLabel userLabel = new JLabel("  Logged in as: " + currentUser.getName() + "  [" + role + "]");
-        userLabel.setFont(userLabel.getFont().deriveFont(Font.BOLD));
-        JButton btnLogout = new JButton("Logout");
-        btnLogout.addActionListener(e -> {
+        Label userLabel = new Label("Logged in as: " + currentUser.getName() + "  [" + role + "]");
+        userLabel.setStyle("-fx-font-weight: bold;");
+        Button btnLogout = new Button("Logout");
+        btnLogout.setOnAction(e -> {
             saveLibrary();
             currentUser = null;
-            rootPanel.remove(rootPanel.getComponent(1));
-            cardLayout.show(rootPanel, "LOGIN");
+            showLoginScreen();
         });
-        topBar.add(userLabel,  BorderLayout.WEST);
-        topBar.add(btnLogout,  BorderLayout.EAST);
-        topBar.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
 
-        JPanel main = new JPanel(new BorderLayout());
-        main.add(topBar, BorderLayout.NORTH);
-        main.add(tabs,   BorderLayout.CENTER);
-        return main;
+        HBox topBar = new HBox(10, userLabel, new Region(), btnLogout);
+        HBox.setHgrow(topBar.getChildren().get(1), Priority.ALWAYS);
+        topBar.setAlignment(Pos.CENTER_LEFT);
+        topBar.setPadding(new Insets(6, 10, 6, 10));
+        topBar.setStyle("-fx-background-color: #e8e8e8; -fx-border-color: #ccc; -fx-border-width: 0 0 1 0;");
+
+        BorderPane root = new BorderPane();
+        root.setTop(topBar);
+        root.setCenter(tabs);
+        return root;
     }
 
     // ════════════════════════════════════════════════════════════════════════
     // BOOKS TAB
     // ════════════════════════════════════════════════════════════════════════
-    private JPanel buildBooksTab(boolean isLibrarian) {
-        JPanel panel = new JPanel(new BorderLayout(5, 5));
-        panel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+    private Pane buildBooksTab(boolean isLibrarian) {
+        // Table
+        TableView<BookItem> table = new TableView<>();
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        TableColumn<BookItem, String> colBarcode = col("Barcode",  b -> b.barcode);
+        TableColumn<BookItem, String> colTitle   = col("Title",    b -> b.title);
+        TableColumn<BookItem, String> colAuthor  = col("Author",   b -> b.getAuthorsString());
+        TableColumn<BookItem, String> colSubject = col("Subject",  b -> b.subject);
+        TableColumn<BookItem, String> colISBN    = col("ISBN",     b -> b.ISBN);
+        TableColumn<BookItem, String> colFormat  = col("Format",   b -> b.format.name());
+        TableColumn<BookItem, String> colStatus  = col("Status",   b -> b.status.name());
+        TableColumn<BookItem, String> colPrice   = col("Price",    b -> String.format("$%.2f", b.price));
+        table.getColumns().addAll(colBarcode, colTitle, colAuthor, colSubject, colISBN, colFormat, colStatus, colPrice);
+        refreshBooksTable(table, library.getCatalog().getAllBooks());
 
-        String[] cols = {"Barcode", "Title", "Author", "Subject", "ISBN", "Format", "Status", "Price"};
-        DefaultTableModel model = new DefaultTableModel(cols, 0) {
-            public boolean isCellEditable(int r, int c) { return false; }
-        };
-        JTable table = new JTable(model);
-        refreshBooksTable(model, library.getCatalog().getAllBooks());
+        // Search bar
+        TextField searchField = new TextField();
+        searchField.setPromptText("Search...");
+        ComboBox<String> searchType = new ComboBox<>(FXCollections.observableArrayList("Title", "Author", "Subject", "ISBN"));
+        searchType.setValue("Title");
+        Button btnSearch = new Button("Search");
+        Button btnClear  = new Button("Clear");
 
-        JPanel searchBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        JTextField searchField = new JTextField(18);
-        JComboBox<String> searchType = new JComboBox<>(new String[]{"Title", "Author", "Subject", "ISBN"});
-        JButton btnSearch = new JButton("Search");
-        JButton btnClear  = new JButton("Clear");
-        searchBar.add(new JLabel("Search:")); searchBar.add(searchField);
-        searchBar.add(new JLabel("by"));      searchBar.add(searchType);
-        searchBar.add(btnSearch);             searchBar.add(btnClear);
-
-        btnSearch.addActionListener(e -> {
+        btnSearch.setOnAction(e -> {
             String q = searchField.getText().trim();
-            if (q.isEmpty()) { refreshBooksTable(model, library.getCatalog().getAllBooks()); return; }
+            if (q.isEmpty()) { refreshBooksTable(table, library.getCatalog().getAllBooks()); return; }
             List<BookItem> results;
-            switch ((String) searchType.getSelectedItem()) {
+            switch (searchType.getValue()) {
                 case "Author":  results = library.getCatalog().searchByAuthor(q);  break;
                 case "Subject": results = library.getCatalog().searchBySubject(q); break;
                 case "ISBN":    results = library.getCatalog().searchByISBN(q);    break;
                 default:        results = library.getCatalog().searchByTitle(q);   break;
             }
-            refreshBooksTable(model, results);
+            refreshBooksTable(table, results);
         });
-        btnClear.addActionListener(e -> { searchField.setText(""); refreshBooksTable(model, library.getCatalog().getAllBooks()); });
+        btnClear.setOnAction(e -> { searchField.clear(); refreshBooksTable(table, library.getCatalog().getAllBooks()); });
 
-        JPanel top = new JPanel(new BorderLayout());
-        top.add(searchBar, BorderLayout.NORTH);
+        HBox searchBar = new HBox(6, new Label("Search:"), searchField, new Label("by"), searchType, btnSearch, btnClear);
+        searchBar.setAlignment(Pos.CENTER_LEFT);
 
-        // Librarian-only buttons
+        VBox top = new VBox(4, searchBar);
+
         if (isLibrarian) {
-            JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-            JButton btnAdd    = new JButton("Add Book");
-            JButton btnRemove = new JButton("Remove Book");
-            btnPanel.add(btnAdd); btnPanel.add(btnRemove);
-
-            btnAdd.addActionListener(e -> { showAddBookDialog(); refreshBooksTable(model, library.getCatalog().getAllBooks()); });
-            btnRemove.addActionListener(e -> {
-                int row = table.getSelectedRow();
-                if (row < 0) { JOptionPane.showMessageDialog(this, "Select a book first."); return; }
-                BookItem found = findBookByBarcode((String) model.getValueAt(row, 0));
-                if (found != null) { library.removeBookItem(found); Notification.send("Book removed: " + found.title); refreshBooksTable(model, library.getCatalog().getAllBooks()); }
+            Button btnAdd    = new Button("Add Book");
+            Button btnRemove = new Button("Remove Book");
+            btnAdd.setOnAction(e -> { showAddBookDialog(); refreshBooksTable(table, library.getCatalog().getAllBooks()); });
+            btnRemove.setOnAction(e -> {
+                BookItem sel = table.getSelectionModel().getSelectedItem();
+                if (sel == null) { alert("Select a book first."); return; }
+                library.removeBookItem(sel);
+                Notification.send("Book removed: " + sel.title);
+                refreshBooksTable(table, library.getCatalog().getAllBooks());
             });
-            top.add(btnPanel, BorderLayout.SOUTH);
+            HBox btnBar = new HBox(6, btnAdd, btnRemove);
+            top.getChildren().add(btnBar);
         }
 
-        panel.add(top, BorderLayout.NORTH);
-        panel.add(new JScrollPane(table), BorderLayout.CENTER);
-        return panel;
+        top.setPadding(new Insets(8));
+        BorderPane pane = new BorderPane();
+        pane.setTop(top);
+        pane.setCenter(new ScrollPane(table) {{ setFitToWidth(true); setFitToHeight(true); }});
+        return pane;
     }
 
-    private void refreshBooksTable(DefaultTableModel model, List<BookItem> books) {
-        model.setRowCount(0);
-        for (BookItem b : books)
-            model.addRow(new Object[]{ b.barcode, b.title, b.getAuthorsString(), b.subject, b.ISBN, b.format.name(), b.status.name(), String.format("$%.2f", b.price) });
+    private void refreshBooksTable(TableView<BookItem> table, List<BookItem> books) {
+        table.setItems(FXCollections.observableArrayList(books));
     }
 
     private void showAddBookDialog() {
-        JTextField fISBN = new JTextField(15), fTitle = new JTextField(15), fAuthor = new JTextField(15);
-        JTextField fSubject = new JTextField(15), fPublisher = new JTextField(15);
-        JTextField fPages = new JTextField("0", 5), fPrice = new JTextField("0.00", 7);
-        JComboBox<BookFormat> fFormat = new JComboBox<>(BookFormat.values());
+        Dialog<ButtonType> dlg = new Dialog<>();
+        dlg.setTitle("Add Book");
+        dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
 
-        JPanel form = new JPanel(new GridLayout(0, 2, 4, 4));
-        form.add(new JLabel("ISBN:"));      form.add(fISBN);
-        form.add(new JLabel("Title:"));     form.add(fTitle);
-        form.add(new JLabel("Author:"));    form.add(fAuthor);
-        form.add(new JLabel("Subject:"));   form.add(fSubject);
-        form.add(new JLabel("Publisher:")); form.add(fPublisher);
-        form.add(new JLabel("Pages:"));     form.add(fPages);
-        form.add(new JLabel("Price ($):")); form.add(fPrice);
-        form.add(new JLabel("Format:"));    form.add(fFormat);
+        TextField fISBN = new TextField(), fTitle = new TextField(), fAuthor = new TextField();
+        TextField fSubject = new TextField(), fPublisher = new TextField();
+        TextField fPages = new TextField("0"), fPrice = new TextField("0.00");
+        ComboBox<BookFormat> fFormat = new ComboBox<>(FXCollections.observableArrayList(BookFormat.values()));
+        fFormat.setValue(BookFormat.PAPERBACK);
 
-        if (JOptionPane.showConfirmDialog(this, form, "Add Book", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) != JOptionPane.OK_OPTION) return;
-        try {
-            String title = fTitle.getText().trim(), author = fAuthor.getText().trim();
-            if (title.isEmpty() || author.isEmpty()) { JOptionPane.showMessageDialog(this, "Title and Author are required."); return; }
-            BookItem item = new BookItem(fISBN.getText().trim(), title, fSubject.getText().trim(),
-                    fPublisher.getText().trim(), "English", Integer.parseInt(fPages.getText().trim()),
-                    author, Double.parseDouble(fPrice.getText().trim()), (BookFormat) fFormat.getSelectedItem(), false);
-            library.addBookItem(item);
-            Notification.send("Book added: " + title + " by " + author);
-        } catch (NumberFormatException ex) { JOptionPane.showMessageDialog(this, "Invalid number for Pages or Price."); }
+        GridPane g = new GridPane(); g.setHgap(8); g.setVgap(6); g.setPadding(new Insets(10));
+        g.addRow(0, new Label("ISBN:"),      fISBN);
+        g.addRow(1, new Label("Title:"),     fTitle);
+        g.addRow(2, new Label("Author:"),    fAuthor);
+        g.addRow(3, new Label("Subject:"),   fSubject);
+        g.addRow(4, new Label("Publisher:"), fPublisher);
+        g.addRow(5, new Label("Pages:"),     fPages);
+        g.addRow(6, new Label("Price ($):"), fPrice);
+        g.addRow(7, new Label("Format:"),    fFormat);
+        dlg.getDialogPane().setContent(g);
+
+        dlg.showAndWait().ifPresent(bt -> {
+            if (bt != ButtonType.OK) return;
+            try {
+                String title = fTitle.getText().trim(), author = fAuthor.getText().trim();
+                if (title.isEmpty() || author.isEmpty()) { alert("Title and Author are required."); return; }
+                BookItem item = new BookItem(fISBN.getText().trim(), title, fSubject.getText().trim(),
+                        fPublisher.getText().trim(), "English", Integer.parseInt(fPages.getText().trim()),
+                        author, Double.parseDouble(fPrice.getText().trim()), fFormat.getValue(), false);
+                library.addBookItem(item);
+                Notification.send("Book added: " + title + " by " + author);
+            } catch (NumberFormatException ex) { alert("Invalid number for Pages or Price."); }
+        });
     }
 
     // ════════════════════════════════════════════════════════════════════════
     // MEMBERS TAB (Librarian only)
     // ════════════════════════════════════════════════════════════════════════
-    private JPanel buildMembersTab() {
-        JPanel panel = new JPanel(new BorderLayout(5, 5));
-        panel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+    private Pane buildMembersTab() {
+        TableView<Member> table = new TableView<>();
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        table.getColumns().addAll(
+                col("ID",        m -> m.getId()),
+                col("Name",      m -> m.getName()),
+                col("Email",     m -> m.getEmail()),
+                col("Phone",     m -> m.getPhone()),
+                col("Status",    m -> m.getStatus().name()),
+                col("Books Out", m -> String.valueOf(m.getTotalCheckedOutBooks()))
+        );
+        refreshMembersTable(table);
 
-        String[] cols = {"ID", "Name", "Email", "Phone", "Status", "Books Out"};
-        DefaultTableModel model = new DefaultTableModel(cols, 0) { public boolean isCellEditable(int r, int c) { return false; } };
-        JTable table = new JTable(model);
-        refreshMembersTable(model);
+        Button btnAdd     = new Button("Add Member");
+        Button btnBlock   = new Button("Block");
+        Button btnUnblock = new Button("Unblock");
 
-        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        JButton btnAdd = new JButton("Add Member"), btnBlock = new JButton("Block"), btnUnblock = new JButton("Unblock");
-        btnPanel.add(btnAdd); btnPanel.add(btnBlock); btnPanel.add(btnUnblock);
-
-        btnAdd.addActionListener(e -> { showAddMemberDialog(); refreshMembersTable(model); });
-        btnBlock.addActionListener(e -> {
-            Member m = getSelectedMember(table, model);
-            if (m == null) return;
-            adminLibrarian.blockMember(m); Notification.send("Member blocked: " + m.getName()); refreshMembersTable(model);
+        btnAdd.setOnAction(e -> { showAddMemberDialog(); refreshMembersTable(table); });
+        btnBlock.setOnAction(e -> {
+            Member m = table.getSelectionModel().getSelectedItem();
+            if (m == null) { alert("Select a member first."); return; }
+            adminLibrarian.blockMember(m); Notification.send("Member blocked: " + m.getName()); refreshMembersTable(table);
         });
-        btnUnblock.addActionListener(e -> {
-            Member m = getSelectedMember(table, model);
-            if (m == null) return;
-            adminLibrarian.unblockMember(m); Notification.send("Member unblocked: " + m.getName()); refreshMembersTable(model);
+        btnUnblock.setOnAction(e -> {
+            Member m = table.getSelectionModel().getSelectedItem();
+            if (m == null) { alert("Select a member first."); return; }
+            adminLibrarian.unblockMember(m); Notification.send("Member unblocked: " + m.getName()); refreshMembersTable(table);
         });
 
-        panel.add(btnPanel, BorderLayout.NORTH);
-        panel.add(new JScrollPane(table), BorderLayout.CENTER);
-        return panel;
+        HBox btnBar = new HBox(6, btnAdd, btnBlock, btnUnblock);
+        btnBar.setPadding(new Insets(8));
+        BorderPane pane = new BorderPane();
+        pane.setTop(btnBar);
+        pane.setCenter(table);
+        return pane;
     }
 
-    private void refreshMembersTable(DefaultTableModel model) {
-        model.setRowCount(0);
-        for (Member m : library.getMembers())
-            model.addRow(new Object[]{ m.getId(), m.getName(), m.getEmail(), m.getPhone(), m.getStatus().name(), m.getTotalCheckedOutBooks() });
+    private void refreshMembersTable(TableView<Member> table) {
+        table.setItems(FXCollections.observableArrayList(library.getMembers()));
     }
 
     private void showAddMemberDialog() {
-        JTextField fName = new JTextField(15), fEmail = new JTextField(15), fPhone = new JTextField(15);
-        JPasswordField fPass = new JPasswordField(15);
-        JPanel form = new JPanel(new GridLayout(0, 2, 4, 4));
-        form.add(new JLabel("Name:"));     form.add(fName);
-        form.add(new JLabel("Email:"));    form.add(fEmail);
-        form.add(new JLabel("Phone:"));    form.add(fPhone);
-        form.add(new JLabel("Password:")); form.add(fPass);
-        if (JOptionPane.showConfirmDialog(this, form, "Add Member", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) != JOptionPane.OK_OPTION) return;
-        String name = fName.getText().trim();
-        if (name.isEmpty()) { JOptionPane.showMessageDialog(this, "Name is required."); return; }
-        Member member = new Member(name, fEmail.getText().trim(), fPhone.getText().trim(), new String(fPass.getPassword()));
-        library.addMember(member);
-        Notification.send("Member added: " + name);
-    }
+        Dialog<ButtonType> dlg = new Dialog<>();
+        dlg.setTitle("Add Member");
+        dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
 
-    private Member getSelectedMember(JTable table, DefaultTableModel model) {
-        int row = table.getSelectedRow();
-        if (row < 0) { JOptionPane.showMessageDialog(this, "Select a member first."); return null; }
-        String id = (String) model.getValueAt(row, 0);
-        return library.getMembers().stream().filter(m -> m.getId().equals(id)).findFirst().orElse(null);
+        TextField fName = new TextField(), fEmail = new TextField(), fPhone = new TextField();
+        PasswordField fPass = new PasswordField();
+        GridPane g = new GridPane(); g.setHgap(8); g.setVgap(6); g.setPadding(new Insets(10));
+        g.addRow(0, new Label("Name:"),     fName);
+        g.addRow(1, new Label("Email:"),    fEmail);
+        g.addRow(2, new Label("Phone:"),    fPhone);
+        g.addRow(3, new Label("Password:"), fPass);
+        dlg.getDialogPane().setContent(g);
+
+        dlg.showAndWait().ifPresent(bt -> {
+            if (bt != ButtonType.OK) return;
+            String name = fName.getText().trim();
+            if (name.isEmpty()) { alert("Name is required."); return; }
+            library.addMember(new Member(name, fEmail.getText().trim(), fPhone.getText().trim(), fPass.getText()));
+            Notification.send("Member added: " + name);
+        });
     }
 
     // ════════════════════════════════════════════════════════════════════════
     // MY ACCOUNT TAB (Member only)
     // ════════════════════════════════════════════════════════════════════════
-    private JPanel buildMyAccountTab(Member member) {
-        JPanel panel = new JPanel(new BorderLayout(5, 5));
-        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
-
-        JTextArea info = new JTextArea();
-        info.setEditable(false);
-        info.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 13));
-        info.setText(
-                "Name:            " + member.getName() + "\n" +
-                        "Email:           " + member.getEmail() + "\n" +
-                        "Phone:           " + member.getPhone() + "\n" +
-                        "Member ID:       " + member.getId() + "\n" +
-                        "Card Number:     " + member.libraryCard.cardNumber + "\n" +
-                        "Card Barcode:    " + member.libraryCard.barcode + "\n" +
-                        "Member Since:    " + SDF.format(member.dateOfMembership) + "\n" +
-                        "Status:          " + member.getStatus().name() + "\n" +
+    private Pane buildMyAccountTab(Member member) {
+        TextArea info = new TextArea(
+                "Name:              " + member.getName() + "\n" +
+                        "Email:             " + member.getEmail() + "\n" +
+                        "Phone:             " + member.getPhone() + "\n" +
+                        "Member ID:         " + member.getId() + "\n" +
+                        "Card Number:       " + member.libraryCard.cardNumber + "\n" +
+                        "Card Barcode:      " + member.libraryCard.barcode + "\n" +
+                        "Member Since:      " + SDF.format(member.dateOfMembership) + "\n" +
+                        "Status:            " + member.getStatus().name() + "\n" +
                         "Books Checked Out: " + member.getTotalCheckedOutBooks() + " / " + Member.MAX_BOOKS_CHECKOUT
         );
-
-        panel.add(new JScrollPane(info), BorderLayout.CENTER);
-        return panel;
+        info.setEditable(false);
+        info.setStyle("-fx-font-family: monospace; -fx-font-size: 13;");
+        BorderPane pane = new BorderPane(info);
+        pane.setPadding(new Insets(12));
+        return pane;
     }
 
     // ════════════════════════════════════════════════════════════════════════
     // CHECKOUT / RETURN TAB
     // ════════════════════════════════════════════════════════════════════════
-    private JPanel buildCheckoutTab() {
+    private Pane buildCheckoutTab() {
         boolean isLibrarian = currentUser instanceof Librarian;
-        JPanel panel = new JPanel(new GridLayout(1, 2, 12, 0));
-        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
 
         // ── Checkout ──
-        JPanel coPanel = new JPanel(new GridBagLayout());
-        coPanel.setBorder(BorderFactory.createTitledBorder("Checkout Book"));
-        GridBagConstraints g = new GridBagConstraints();
-        g.insets = new Insets(6,6,6,6); g.fill = GridBagConstraints.HORIZONTAL;
+        ComboBox<String> coMemberBox  = new ComboBox<>();
+        ComboBox<String> coBarcodeBox = new ComboBox<>();
+        Button btnCheckout = new Button("Checkout");
 
-        JComboBox<String> coMemberBox = new JComboBox<>();
-        JComboBox<String> coBarcodeBox = new JComboBox<>();
-        JButton btnCheckout = new JButton("Checkout");
-
-        if (isLibrarian) { populateMemberCombo(coMemberBox); }
-        else { coMemberBox.addItem(currentUser.getId() + " - " + currentUser.getName()); coMemberBox.setEnabled(false); }
+        if (isLibrarian) populateMemberCombo(coMemberBox);
+        else { coMemberBox.getItems().add(currentUser.getId() + " - " + currentUser.getName()); coMemberBox.setDisable(true); }
         populateAvailableBooksCombo(coBarcodeBox);
 
-        g.gridx=0; g.gridy=0; coPanel.add(new JLabel("Member:"), g);
-        g.gridx=1; coPanel.add(coMemberBox, g);
-        g.gridx=0; g.gridy=1; coPanel.add(new JLabel("Book:"), g);
-        g.gridx=1; coPanel.add(coBarcodeBox, g);
-        g.gridx=0; g.gridy=2; g.gridwidth=2; coPanel.add(btnCheckout, g);
+        GridPane coGrid = new GridPane(); coGrid.setHgap(10); coGrid.setVgap(10); coGrid.setPadding(new Insets(10));
+        coGrid.addRow(0, new Label("Member:"), coMemberBox);
+        coGrid.addRow(1, new Label("Book:"),   coBarcodeBox);
+        GridPane.setColumnSpan(btnCheckout, 2); coGrid.add(btnCheckout, 0, 2);
 
-        btnCheckout.addActionListener(e -> {
-            String sel = (String) coMemberBox.getSelectedItem();
-            String bar = (String) coBarcodeBox.getSelectedItem();
-            if (sel == null || bar == null) { JOptionPane.showMessageDialog(this, "Select member and book."); return; }
+        TitledPane coPane = new TitledPane("Checkout Book", coGrid);
+        coPane.setCollapsible(false);
+
+        btnCheckout.setOnAction(e -> {
+            String sel = coMemberBox.getValue(), bar = coBarcodeBox.getValue();
+            if (sel == null || bar == null) { alert("Select member and book."); return; }
             Member member = isLibrarian ? findMemberById(sel.split(" ")[0]) : (Member) currentUser;
             BookItem book = findBookByBarcode(bar.split(" ")[0]);
-            if (member == null || book == null) { JOptionPane.showMessageDialog(this, "Not found."); return; }
-            if (member.getStatus() == AccountStatus.BLACKLISTED) { JOptionPane.showMessageDialog(this, "Member is blacklisted."); return; }
+            if (member == null || book == null) { alert("Not found."); return; }
+            if (member.getStatus() == AccountStatus.BLACKLISTED) { alert("Member is blacklisted."); return; }
             if (member.checkoutBook(book)) {
-                library.recordLending(member.activeLoans.get(member.activeLoans.size()-1));
+                library.recordLending(member.activeLoans.get(member.activeLoans.size() - 1));
                 Notification.send(member.getName() + " checked out: " + book.title);
-                JOptionPane.showMessageDialog(this, "Checkout successful!\nDue: " + SDF.format(book.dueDate));
+                alert("Checkout successful!\nDue: " + SDF.format(book.dueDate));
                 populateAvailableBooksCombo(coBarcodeBox);
-            } else { JOptionPane.showMessageDialog(this, "Checkout failed. Unavailable or limit reached."); }
+            } else alert("Checkout failed. Unavailable or limit reached.");
         });
 
         // ── Return ──
-        JPanel retPanel = new JPanel(new GridBagLayout());
-        retPanel.setBorder(BorderFactory.createTitledBorder("Return Book"));
-        GridBagConstraints g2 = new GridBagConstraints();
-        g2.insets = new Insets(6,6,6,6); g2.fill = GridBagConstraints.HORIZONTAL;
-
-        JComboBox<String> retMemberBox = new JComboBox<>();
-        JComboBox<String> retBarcodeBox = new JComboBox<>();
-        JButton btnReturn = new JButton("Return");
+        ComboBox<String> retMemberBox  = new ComboBox<>();
+        ComboBox<String> retBarcodeBox = new ComboBox<>();
+        Button btnReturn = new Button("Return");
 
         if (isLibrarian) {
             populateMemberCombo(retMemberBox);
-            retMemberBox.addActionListener(e -> {
-                String s = (String) retMemberBox.getSelectedItem();
+            retMemberBox.setOnAction(e -> {
+                String s = retMemberBox.getValue();
                 if (s != null) populateLoanedBooksCombo(retBarcodeBox, findMemberById(s.split(" ")[0]));
             });
-            if (retMemberBox.getItemCount() > 0) {
-                String s = (String) retMemberBox.getSelectedItem();
-                if (s != null) populateLoanedBooksCombo(retBarcodeBox, findMemberById(s.split(" ")[0]));
+            if (!retMemberBox.getItems().isEmpty()) {
+                retMemberBox.setValue(retMemberBox.getItems().get(0));
+                populateLoanedBooksCombo(retBarcodeBox, findMemberById(retMemberBox.getValue().split(" ")[0]));
             }
         } else {
-            retMemberBox.addItem(currentUser.getId() + " - " + currentUser.getName());
-            retMemberBox.setEnabled(false);
+            retMemberBox.getItems().add(currentUser.getId() + " - " + currentUser.getName());
+            retMemberBox.setDisable(true);
             populateLoanedBooksCombo(retBarcodeBox, (Member) currentUser);
         }
 
-        g2.gridx=0; g2.gridy=0; retPanel.add(new JLabel("Member:"), g2);
-        g2.gridx=1; retPanel.add(retMemberBox, g2);
-        g2.gridx=0; g2.gridy=1; retPanel.add(new JLabel("Book:"), g2);
-        g2.gridx=1; retPanel.add(retBarcodeBox, g2);
-        g2.gridx=0; g2.gridy=2; g2.gridwidth=2; retPanel.add(btnReturn, g2);
+        GridPane retGrid = new GridPane(); retGrid.setHgap(10); retGrid.setVgap(10); retGrid.setPadding(new Insets(10));
+        retGrid.addRow(0, new Label("Member:"), retMemberBox);
+        retGrid.addRow(1, new Label("Book:"),   retBarcodeBox);
+        GridPane.setColumnSpan(btnReturn, 2); retGrid.add(btnReturn, 0, 2);
 
-        btnReturn.addActionListener(e -> {
-            String sel = (String) retMemberBox.getSelectedItem();
-            String bar = (String) retBarcodeBox.getSelectedItem();
-            if (sel == null || bar == null) { JOptionPane.showMessageDialog(this, "Select member and book."); return; }
+        TitledPane retPane = new TitledPane("Return Book", retGrid);
+        retPane.setCollapsible(false);
+
+        btnReturn.setOnAction(e -> {
+            String sel = retMemberBox.getValue(), bar = retBarcodeBox.getValue();
+            if (sel == null || bar == null) { alert("Select member and book."); return; }
             Member member = isLibrarian ? findMemberById(sel.split(" ")[0]) : (Member) currentUser;
             BookItem book = findBookByBarcode(bar.split(" ")[0]);
-            if (member == null || book == null) { JOptionPane.showMessageDialog(this, "Not found."); return; }
+            if (member == null || book == null) { alert("Not found."); return; }
             BookLending lending = member.returnBook(book);
             if (lending != null) {
                 double fine = new Fine(lending).getAmount();
                 String msg = "Book returned: " + book.title;
                 if (fine > 0) msg += String.format("\nOverdue fine: $%.2f", fine);
                 Notification.send(member.getName() + " returned: " + book.title + (fine > 0 ? " | Fine: $" + String.format("%.2f", fine) : ""));
-                JOptionPane.showMessageDialog(this, msg);
+                alert(msg);
                 populateLoanedBooksCombo(retBarcodeBox, member);
                 populateAvailableBooksCombo(coBarcodeBox);
-            } else { JOptionPane.showMessageDialog(this, "Return failed."); }
+            } else alert("Return failed.");
         });
 
-        panel.add(coPanel); panel.add(retPanel);
-        return panel;
+        HBox layout = new HBox(12, coPane, retPane);
+        layout.setPadding(new Insets(12));
+        HBox.setHgrow(coPane,  Priority.ALWAYS);
+        HBox.setHgrow(retPane, Priority.ALWAYS);
+        return layout;
     }
 
-    private void populateMemberCombo(JComboBox<String> combo) {
-        combo.removeAllItems();
-        for (Member m : library.getMembers()) combo.addItem(m.getId() + " - " + m.getName());
+    private void populateMemberCombo(ComboBox<String> combo) {
+        combo.getItems().clear();
+        for (Member m : library.getMembers()) combo.getItems().add(m.getId() + " - " + m.getName());
+        if (!combo.getItems().isEmpty()) combo.setValue(combo.getItems().get(0));
     }
 
-    private void populateAvailableBooksCombo(JComboBox<String> combo) {
-        combo.removeAllItems();
+    private void populateAvailableBooksCombo(ComboBox<String> combo) {
+        combo.getItems().clear();
         for (BookItem b : library.getCatalog().getAllBooks())
-            if (b.status == BookStatus.AVAILABLE) combo.addItem(b.barcode + " - " + b.title);
+            if (b.status == BookStatus.AVAILABLE) combo.getItems().add(b.barcode + " - " + b.title);
+        if (!combo.getItems().isEmpty()) combo.setValue(combo.getItems().get(0));
     }
 
-    private void populateLoanedBooksCombo(JComboBox<String> combo, Member member) {
-        combo.removeAllItems();
+    private void populateLoanedBooksCombo(ComboBox<String> combo, Member member) {
+        combo.getItems().clear();
         if (member == null) return;
-        for (BookLending l : member.activeLoans) combo.addItem(l.book.barcode + " - " + l.book.title);
+        for (BookLending l : member.activeLoans) combo.getItems().add(l.book.barcode + " - " + l.book.title);
+        if (!combo.getItems().isEmpty()) combo.setValue(combo.getItems().get(0));
     }
 
     // ════════════════════════════════════════════════════════════════════════
     // RESERVATIONS TAB
     // ════════════════════════════════════════════════════════════════════════
-    private JPanel buildReservationsTab() {
+    private Pane buildReservationsTab() {
         boolean isLibrarian = currentUser instanceof Librarian;
-        JPanel panel = new JPanel(new BorderLayout(5, 5));
-        panel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
 
-        String[] cols = {"Member", "Book Title", "Date", "Status"};
-        DefaultTableModel model = new DefaultTableModel(cols, 0) { public boolean isCellEditable(int r, int c) { return false; } };
-        JTable table = new JTable(model);
-        refreshReservationsTable(model, isLibrarian);
+        TableView<BookReservation> table = new TableView<>();
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        TableColumn<BookReservation, String> colMember = new TableColumn<>("Member");
+        colMember.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().member.getName()));
+        TableColumn<BookReservation, String> colBook = new TableColumn<>("Book Title");
+        colBook.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().book.title));
+        TableColumn<BookReservation, String> colDate = new TableColumn<>("Date");
+        colDate.setCellValueFactory(cd -> new SimpleStringProperty(SDF.format(cd.getValue().creationDate)));
+        TableColumn<BookReservation, String> colStatus = new TableColumn<>("Status");
+        colStatus.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().status.name()));
+        table.getColumns().addAll(colMember, colBook, colDate, colStatus);
+        refreshReservationsTable(table, isLibrarian);
 
-        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        JButton btnReserve = new JButton("Reserve Book");
-        JButton btnCancel  = new JButton("Cancel Reservation");
-        btnPanel.add(btnReserve); btnPanel.add(btnCancel);
+        Button btnReserve = new Button("Reserve Book");
+        Button btnCancel  = new Button("Cancel Reservation");
 
-        btnReserve.addActionListener(e -> { showReserveDialog(isLibrarian); refreshReservationsTable(model, isLibrarian); });
-        btnCancel.addActionListener(e -> {
-            int row = table.getSelectedRow();
-            if (row < 0) { JOptionPane.showMessageDialog(this, "Select a reservation first."); return; }
-            String memberName = (String) model.getValueAt(row, 0);
-            String bookTitle  = (String) model.getValueAt(row, 1);
-            for (Member m : library.getMembers()) {
-                if (!isLibrarian && m != currentUser) continue;
-                for (BookReservation r : m.activeReservations) {
-                    if (m.getName().equals(memberName) && r.book.title.equals(bookTitle) && r.status == ReservationStatus.WAITING) {
-                        r.cancelReservation(); r.book.status = BookStatus.AVAILABLE;
-                        Notification.send("Reservation cancelled: " + bookTitle + " for " + memberName);
-                        refreshReservationsTable(model, isLibrarian); return;
-                    }
-                }
-            }
-            JOptionPane.showMessageDialog(this, "Could not cancel reservation.");
+        btnReserve.setOnAction(e -> { showReserveDialog(isLibrarian); refreshReservationsTable(table, isLibrarian); });
+        btnCancel.setOnAction(e -> {
+            BookReservation sel = table.getSelectionModel().getSelectedItem();
+            if (sel == null) { alert("Select a reservation first."); return; }
+            sel.cancelReservation();
+            sel.book.status = BookStatus.AVAILABLE;
+            Notification.send("Reservation cancelled: " + sel.book.title + " for " + sel.member.getName());
+            refreshReservationsTable(table, isLibrarian);
         });
 
-        panel.add(btnPanel, BorderLayout.NORTH);
-        panel.add(new JScrollPane(table), BorderLayout.CENTER);
-        return panel;
+        HBox btnBar = new HBox(6, btnReserve, btnCancel);
+        btnBar.setPadding(new Insets(8));
+        BorderPane pane = new BorderPane();
+        pane.setTop(btnBar);
+        pane.setCenter(table);
+        return pane;
     }
 
-    private void refreshReservationsTable(DefaultTableModel model, boolean isLibrarian) {
-        model.setRowCount(0);
+    private void refreshReservationsTable(TableView<BookReservation> table, boolean isLibrarian) {
+        ObservableList<BookReservation> items = FXCollections.observableArrayList();
         for (Member m : library.getMembers()) {
             if (!isLibrarian && m != currentUser) continue;
             for (BookReservation r : m.activeReservations)
                 if (r.status == ReservationStatus.WAITING || r.status == ReservationStatus.PENDING)
-                    model.addRow(new Object[]{ m.getName(), r.book.title, SDF.format(r.creationDate), r.status.name() });
+                    items.add(r);
         }
+        table.setItems(items);
     }
 
     private void showReserveDialog(boolean isLibrarian) {
-        JComboBox<String> memberBox = new JComboBox<>();
-        JComboBox<String> bookBox   = new JComboBox<>();
+        ComboBox<String> memberBox = new ComboBox<>();
+        ComboBox<String> bookBox   = new ComboBox<>();
 
-        if (isLibrarian) { populateMemberCombo(memberBox); }
-        else { memberBox.addItem(currentUser.getId() + " - " + currentUser.getName()); memberBox.setEnabled(false); }
+        if (isLibrarian) populateMemberCombo(memberBox);
+        else { memberBox.getItems().add(currentUser.getId() + " - " + currentUser.getName()); memberBox.setDisable(true); }
 
         for (BookItem b : library.getCatalog().getAllBooks())
-            if (b.status == BookStatus.LOANED) bookBox.addItem(b.barcode + " - " + b.title);
+            if (b.status == BookStatus.LOANED) bookBox.getItems().add(b.barcode + " - " + b.title);
 
-        if (bookBox.getItemCount() == 0) { JOptionPane.showMessageDialog(this, "No loaned books to reserve."); return; }
+        if (bookBox.getItems().isEmpty()) { alert("No loaned books to reserve."); return; }
+        bookBox.setValue(bookBox.getItems().get(0));
 
-        JPanel form = new JPanel(new GridLayout(0, 2, 4, 4));
-        form.add(new JLabel("Member:")); form.add(memberBox);
-        form.add(new JLabel("Book:"));   form.add(bookBox);
+        Dialog<ButtonType> dlg = new Dialog<>();
+        dlg.setTitle("Reserve Book");
+        dlg.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        GridPane g = new GridPane(); g.setHgap(8); g.setVgap(6); g.setPadding(new Insets(10));
+        g.addRow(0, new Label("Member:"), memberBox);
+        g.addRow(1, new Label("Book:"),   bookBox);
+        dlg.getDialogPane().setContent(g);
 
-        if (JOptionPane.showConfirmDialog(this, form, "Reserve Book", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) != JOptionPane.OK_OPTION) return;
-
-        String sel = (String) memberBox.getSelectedItem();
-        String bar = (String) bookBox.getSelectedItem();
-        if (sel == null || bar == null) return;
-
-        Member member = isLibrarian ? findMemberById(sel.split(" ")[0]) : (Member) currentUser;
-        BookItem book = findBookByBarcode(bar.split(" ")[0]);
-        if (member == null || book == null) return;
-
-        if (member.reserveBook(book)) {
-            Notification.send(member.getName() + " reserved: " + book.title);
-            JOptionPane.showMessageDialog(this, "Reservation placed for: " + book.title);
-        } else { JOptionPane.showMessageDialog(this, "Reservation failed. Book may be available for checkout."); }
+        dlg.showAndWait().ifPresent(bt -> {
+            if (bt != ButtonType.OK) return;
+            String sel = memberBox.getValue(), bar = bookBox.getValue();
+            if (sel == null || bar == null) return;
+            Member member = isLibrarian ? findMemberById(sel.split(" ")[0]) : (Member) currentUser;
+            BookItem book = findBookByBarcode(bar.split(" ")[0]);
+            if (member == null || book == null) return;
+            if (member.reserveBook(book)) {
+                Notification.send(member.getName() + " reserved: " + book.title);
+                alert("Reservation placed for: " + book.title);
+            } else alert("Reservation failed. Book may be available for checkout.");
+        });
     }
 
     // ════════════════════════════════════════════════════════════════════════
     // NOTIFICATIONS TAB
     // ════════════════════════════════════════════════════════════════════════
-    private JPanel buildNotificationsTab() {
-        JPanel panel = new JPanel(new BorderLayout(5, 5));
-        panel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
-        JTextArea area = new JTextArea();
+    private Pane buildNotificationsTab() {
+        TextArea area = new TextArea();
         area.setEditable(false);
-        area.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        area.setStyle("-fx-font-family: monospace; -fx-font-size: 12;");
         refreshNotifications(area);
-        JButton btnRefresh = new JButton("Refresh");
-        btnRefresh.addActionListener(e -> refreshNotifications(area));
-        panel.add(btnRefresh, BorderLayout.NORTH);
-        panel.add(new JScrollPane(area), BorderLayout.CENTER);
-        return panel;
+        Button btnRefresh = new Button("Refresh");
+        btnRefresh.setOnAction(e -> refreshNotifications(area));
+        VBox pane = new VBox(6, btnRefresh, area);
+        VBox.setVgrow(area, Priority.ALWAYS);
+        pane.setPadding(new Insets(8));
+        return pane;
     }
 
-    private void refreshNotifications(JTextArea area) {
+    private void refreshNotifications(TextArea area) {
         StringBuilder sb = new StringBuilder();
         for (String entry : Notification.getLog()) sb.append(entry).append("\n");
         area.setText(sb.toString());
-        area.setCaretPosition(area.getDocument().getLength());
+        area.positionCaret(area.getLength());
     }
 
     // ════════════════════════════════════════════════════════════════════════
@@ -608,16 +619,17 @@ public class LibraryApp extends JFrame {
         return library.getMembers().stream().filter(m -> m.getId().equals(id)).findFirst().orElse(null);
     }
 
-    // ════════════════════════════════════════════════════════════════════════
-    // MAIN
-    // ════════════════════════════════════════════════════════════════════════
-    public static void main(String[] args) {
-        try {
-            for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels())
-                if ("Nimbus".equals(info.getName())) { UIManager.setLookAndFeel(info.getClassName()); break; }
-        } catch (Exception e) {
-            try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); } catch (Exception ignored) {}
-        }
-        SwingUtilities.invokeLater(() -> new LibraryApp().setVisible(true));
+    /** Generic string column factory for TableView. */
+    private <T> TableColumn<T, String> col(String title, java.util.function.Function<T, String> extractor) {
+        TableColumn<T, String> c = new TableColumn<>(title);
+        c.setCellValueFactory(cd -> new SimpleStringProperty(extractor.apply(cd.getValue())));
+        return c;
     }
+
+    private void alert(String msg) {
+        new Alert(Alert.AlertType.INFORMATION, msg, ButtonType.OK).showAndWait();
+    }
+
+    public static void main(String[] args) { launch(args); }
 }
+

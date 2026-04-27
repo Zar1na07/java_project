@@ -58,7 +58,6 @@ public class Member extends Account implements Serializable {
     }
 
     public boolean renewBook(BookItem book, Library library) {
-        // Per spec: cannot renew if another member has reserved this book
         boolean reservedByOther = library.getMembers().stream()
                 .filter(m -> m != this)
                 .flatMap(m -> m.activeReservations.stream())
