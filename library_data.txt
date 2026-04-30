@@ -1,0 +1,23 @@
+======================================================================
+  CITY LIBRARY — SNAPSHOT   2026-04-30 10:56:16
+======================================================================
+
+--- LIBRARIANS ---
+  63B5810D    Admin                   admin@library.com
+
+--- MEMBERS ---
+  86F8E8AA    Alice Smith             alice@example.com             BLACKLISTED   Books: 0/5
+  1C859C05    zarina                  12345                         ACTIVE        Books: 0/5
+
+--- BOOKS ---
+  18F6CCB5-B      AVAILABLE   To Kill a Mockingbird                   Harper Lee
+  8E7F16CC-6      AVAILABLE   The Great Gatsby                        F. Scott Fitzgerald
+  C952A768-B      AVAILABLE   1984                                    George Orwell
+
+--- ACTIVE LENDINGS ---
+
+--- RESERVATIONS ---
+  Alice Smith             To Kill a Mockingbird                   CANCELED
+  Alice Smith             To Kill a Mockingbird                   COMPLETED
+
+======================================================================
