@@ -27,14 +27,37 @@ public class Member extends Account implements Serializable {
 
     public boolean checkoutBook(BookItem book) {
         if (totalBooksCheckedOut >= MAX_BOOKS_CHECKOUT) return false;
-        if (book.status != BookStatus.AVAILABLE && book.status != BookStatus.RESERVED) return false;
-        BookLending lending = new BookLending(book, this);
-        book.status = BookStatus.LOANED;
-        book.borrowed = new Date();
-        book.dueDate = lending.dueDate;
-        activeLoans.add(lending);
-        totalBooksCheckedOut++;
-        return true;
+
+        if (book.status == BookStatus.AVAILABLE) {
+            BookLending lending = new BookLending(book, this);
+            book.status = BookStatus.LOANED;
+            book.borrowed = new Date();
+            book.dueDate = lending.dueDate;
+            activeLoans.add(lending);
+            totalBooksCheckedOut++;
+            return true;
+        }
+
+        if (book.status == BookStatus.RESERVED) {
+            BookReservation myReservation = activeReservations.stream()
+                    .filter(r -> r.book == book && r.status == ReservationStatus.READY_FOR_PICKUP)
+                    .findFirst()
+                    .orElse(null);
+
+            if (myReservation == null) return false;
+
+            myReservation.completeReservation();
+
+            BookLending lending = new BookLending(book, this);
+            book.status = BookStatus.LOANED;
+            book.borrowed = new Date();
+            book.dueDate = lending.dueDate;
+            activeLoans.add(lending);
+            totalBooksCheckedOut++;
+            return true;
+        }
+
+        return false;
     }
 
     public BookLending returnBook(BookItem book) {

@@ -17,7 +17,16 @@ public class BookReservation implements Serializable {
         this.book = book;
     }
 
-    public void completeReservation() { this.status = ReservationStatus.COMPLETED; }
-    public void cancelReservation() { this.status = ReservationStatus.CANCELED; }
+    public void markReadyForPickup() {
+        this.status = ReservationStatus.READY_FOR_PICKUP;
+    }
+
+    public void completeReservation() {
+        this.status = ReservationStatus.COMPLETED;
+    }
+
+    public void cancelReservation() {
+        this.status = ReservationStatus.CANCELED;
+    }
     public ReservationStatus getStatus() { return status; }
 }

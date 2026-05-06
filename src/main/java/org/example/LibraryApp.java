@@ -30,13 +30,50 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.function.Function;
 
+/*
+ * GROUP GUI RESPONSIBILITIES
+ *
+ * PERSON 1: DURDONA
+ * Backend: Book, Catalog, Address, BookFormat, BookStatus
+ * GUI: Books/Catalog page.
+ *
+ * PERSON 2: BONU
+ * Backend: BookItem, Library, Rack
+ * GUI: Library data, save/load, seed data, Dashboard.
+ *
+ * PERSON 3: MARJONA
+ * Backend: Notification, EmailNotification, PostalNotification, Librarian, Member
+ * GUI: Members page, Notifications page, shared UI helper methods.
+ *
+ * PERSON 4: FERUZA
+ * Backend: BarcodeReader, LibraryCard, Account, AccountStatus
+ * GUI: Login, Register, My Account page.
+ *
+ * PERSON 5: ZARINA
+ * Backend: BookReservation, BookLending, Person, ReservationStatus
+ * GUI: Checkout, Return, Renew, Reservations.
+ *
+ * PERSON 6: RAMIZA
+ * Backend: Fine, FineTransaction, CreditTransaction, CheckTransaction, Cash/CardTransaction
+ * GUI: Navigation layout, sidebar, Fines page.
+ */
+
+
+/**
+ * Main JavaFX application for the Library Management System.
+ *
+ * This file connects the backend classes with GUI pages.
+ * It is divided into clear sections by group member names.
+ */
 public class LibraryApp extends Application {
 
+    // File used for saving/loading serialized library data.
     private static final String SAVE_FILE = "library_data.ser";
     private static final String READABLE_FILE = "library_data.txt";
     private static final SimpleDateFormat SDF = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     private static final SimpleDateFormat DATE_ONLY = new SimpleDateFormat("yyyy-MM-dd");
 
+    // Color palette used for the minimalist JavaFX design.
     private static final String C_NAVY = "#0F172A";
     private static final String C_SIDEBAR = "#1E293B";
     private static final String C_SIDEBAR_HOVER = "#334155";
@@ -52,8 +89,17 @@ public class LibraryApp extends Application {
     private static final String C_MUTED = "#64748B";
     private static final String C_TEXT = "#0F172A";
 
-    private static Library library;
 
+
+
+
+
+    // =========================================================================
+    // PERSON 2: BONU
+    // Classes: BookItem, Library, Rack
+    // GUI: shared Library object, sample data, save/load functions.
+    // =========================================================================
+    private static Library library;
     static {
         library = loadLibrary();
         if (library == null) {
@@ -93,6 +139,7 @@ public class LibraryApp extends Application {
         stage.show();
     }
 
+    /** Loads saved library data from the binary save file. */
     private static Library loadLibrary() {
         File f = new File(SAVE_FILE);
         if (!f.exists()) return null;
@@ -104,6 +151,8 @@ public class LibraryApp extends Application {
         }
     }
 
+
+    /** Saves the project data and exports a readable text snapshot. */
     private static void saveLibrary() {
         try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(SAVE_FILE))) {
             out.writeObject(library);
@@ -135,7 +184,16 @@ public class LibraryApp extends Application {
             System.out.println("Readable export failed: " + e.getMessage());
         }
     }
+    // ============================  BONU  CONTINUES LATER ============================
 
+
+    // =========================================================================
+    // PERSON 4: FERUZA
+    // Classes: BarcodeReader, LibraryCard, Account, AccountStatus
+    // GUI: Login/Register screen and authentication logic.
+    // =========================================================================
+
+    /** Builds the authentication screen with Login and Register tabs. */
     private void showAuthScreen() {
         StackPane brand = new StackPane();
         brand.setPrefWidth(320);
@@ -189,6 +247,7 @@ public class LibraryApp extends Application {
         return label;
     }
 
+    /** Creates login form and checks credentials for Member or Librarian. */
     private ScrollPane buildLoginForm() {
         VBox outer = new VBox();
         outer.setAlignment(Pos.CENTER);
@@ -235,6 +294,7 @@ public class LibraryApp extends Application {
         return scroll;
     }
 
+    /** Creates registration form for new Member or Librarian accounts. */
     private ScrollPane buildRegisterForm() {
         VBox outer = new VBox();
         outer.setAlignment(Pos.CENTER);
@@ -280,12 +340,22 @@ public class LibraryApp extends Application {
         return scroll;
     }
 
+    /** Saves the current user and opens the main application screen. */
     private void doLogin(Account user) {
         currentUser = user;
         Notification.send("Login: " + user.getName() + " [" + (user instanceof Librarian ? "Librarian" : "Member") + "]");
         showMainScreen();
     }
+    // ========================= FERUZA CONTINUES LATER =========================
 
+
+
+    // =========================================================================
+    // PERSON 6: RAMIZA
+    // Classes: Fine, FineTransaction, CreditTransaction, CheckTransaction, Cash/CardTransaction
+    // GUI: Main navigation, top bar, sidebar, active page switching.
+    // =========================================================================
+    /** Creates the main layout: top bar, sidebar, and content area. */
     private void showMainScreen() {
         boolean isLib = currentUser instanceof Librarian;
         BorderPane root = new BorderPane();
@@ -302,6 +372,9 @@ public class LibraryApp extends Application {
         setActiveButton(sideButtons.get(0));
     }
 
+
+
+    /** Builds the top bar with title, user role and logout button. */
     private HBox buildTopBar(boolean isLib) {
         Label title = new Label("📚 Library Management System");
         title.setFont(Font.font("System", FontWeight.BOLD, 20));
@@ -320,6 +393,7 @@ public class LibraryApp extends Application {
         return bar;
     }
 
+    /** Builds the sidebar navigation menu. */
     private VBox buildSidebar(boolean isLib) {
         sideButtons.clear();
         VBox sidebar = new VBox(8);
@@ -360,14 +434,20 @@ public class LibraryApp extends Application {
         return sidebar;
     }
 
-    private void setPage(Node page) { contentArea.getChildren().clear(); contentArea.getChildren().add(page); }
+    /** Changes the page displayed in the center content area. */
+    private void setPage(Node page) {
+        contentArea.getChildren().clear();
+        contentArea.getChildren().add(page);
+    }
 
+    /** Highlights the currently selected sidebar button. */
     private void setActiveButton(Button active) {
         for (Button b : sideButtons) { b.setStyle(sideButtonStyle(false)); b.setTextFill(Color.web("#CBD5E1")); }
         active.setStyle(sideButtonStyle(true));
         active.setTextFill(Color.WHITE);
     }
 
+    /** Creates one styled sidebar button. */
     private Button sideBtn(String text) {
         Button b = new Button(text);
         b.setMaxWidth(Double.MAX_VALUE);
@@ -388,6 +468,18 @@ public class LibraryApp extends Application {
 
     private String sideButtonHoverStyle() { return "-fx-background-color: " + C_SIDEBAR_HOVER + ";-fx-background-radius: 10;-fx-padding: 13 16;"; }
 
+    // ========================= RAMIZA CONTINUES LATER =========================
+
+
+
+
+
+
+    // =========================================================================
+    // PERSON 2: BONU CONTINUED
+    // GUI: Dashboard statistics cards.
+    // =========================================================================
+    /** Builds the dashboard page with library statistics. */
     private ScrollPane buildDashboardPage(boolean isLib) {
         VBox page = pageShell("Dashboard", "Overview of library activity and system status");
         long available = library.getCatalog().getAllBooks().stream().filter(b -> b.status == BookStatus.AVAILABLE).count();
@@ -419,6 +511,16 @@ public class LibraryApp extends Application {
         return card;
     }
 
+    // ============================ END BONU ============================
+
+
+
+    // =========================================================================
+    // PERSON 1: DURDONA
+    // Classes: Book, Catalog, Address, BookFormat, BookStatus
+    // GUI: Books/Catalog page, book search, add/delete book, status badges.
+    // =========================================================================
+    /** Builds the books/catalog page and search controls. */
     private ScrollPane buildBooksPage(boolean isLib) {
         VBox page = pageShell("Book Management", "Search and manage the library catalog");
         TableView<BookItem> table = styledTable();
@@ -473,8 +575,11 @@ public class LibraryApp extends Application {
         return wrapPage(page);
     }
 
+
+    /** Reloads book data into the table. */
     private void refreshBooksTable(TableView<BookItem> table, List<BookItem> books) { table.setItems(FXCollections.observableArrayList(books)); }
 
+    /** Creates colored status badges for book availability. */
     private TableColumn<BookItem, String> statusCol() {
         TableColumn<BookItem, String> column = new TableColumn<>("Status");
         column.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().status.name()));
@@ -495,6 +600,7 @@ public class LibraryApp extends Application {
         return column;
     }
 
+    /** Opens dialog for adding a new book copy. */
     private void showAddBookDialog() {
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle("Add New Book");
@@ -518,7 +624,18 @@ public class LibraryApp extends Application {
             } catch (NumberFormatException ex) { alert("Invalid number for Pages or Price."); }
         });
     }
+    // ============================ END DURDONA ============================
 
+
+
+
+
+    // =========================================================================
+    // PERSON 5: ZARINA
+    // Classes: BookReservation, BookLending, Person, ReservationStatus
+    // GUI: Checkout, Return, Renew, Reservations.
+    // =========================================================================
+    /** Builds checkout and return forms. */
     private ScrollPane buildCheckoutPage() {
         boolean isLib = currentUser instanceof Librarian;
         VBox page = pageShell("Checkout / Return", "Issue and return books with automatic due dates and fines");
@@ -564,6 +681,7 @@ public class LibraryApp extends Application {
         page.getChildren().add(layout); return wrapPage(page);
     }
 
+    /** Builds the renew page for borrowed books. */
     private ScrollPane buildRenewPage() {
         VBox page = pageShell("Renew Book", "Extend due date if no other member has reserved the book");
         Member member = currentUser instanceof Member ? (Member) currentUser : null;
@@ -583,16 +701,71 @@ public class LibraryApp extends Application {
         page.getChildren().add(card); return wrapPage(page);
     }
 
+    /** When a book is returned, assigns it to the oldest waiting reservation. */
     private void fulfillNextReservation(BookItem book) {
         BookReservation oldest = null;
-        for (Member m : library.getMembers()) for (BookReservation r : m.activeReservations) if (r.book == book && r.status == ReservationStatus.WAITING) if (oldest == null || r.creationDate.before(oldest.creationDate)) oldest = r;
-        if (oldest != null) { oldest.completeReservation(); book.status = BookStatus.RESERVED; Notification.send("Reservation fulfilled for " + oldest.member.getName() + " — " + book.title); }
+
+        for (Member member : library.getMembers()) {
+            for (BookReservation reservation : member.activeReservations) {
+                if (reservation.book == book && reservation.status == ReservationStatus.WAITING) {
+                    if (oldest == null || reservation.creationDate.before(oldest.creationDate)) {
+                        oldest = reservation;
+                    }
+                }
+            }
+        }
+
+        if (oldest != null) {
+            oldest.markReadyForPickup();
+            book.status = BookStatus.RESERVED;
+
+            Notification.send(
+                    "Reservation ready for pickup: "
+                            + oldest.member.getName()
+                            + " — "
+                            + book.title
+            );
+        } else {
+            book.status = BookStatus.AVAILABLE;
+        }
     }
 
-    private void populateMemberCombo(ComboBox<String> combo) { combo.getItems().clear(); for (Member m : library.getMembers()) combo.getItems().add(m.getId() + " — " + m.getName()); if (!combo.getItems().isEmpty()) combo.setValue(combo.getItems().get(0)); }
-    private void populateAvailableBooksCombo(ComboBox<String> combo) { combo.getItems().clear(); for (BookItem b : library.getCatalog().getAllBooks()) if (b.status == BookStatus.AVAILABLE) combo.getItems().add(b.barcode + " — " + b.title); if (!combo.getItems().isEmpty()) combo.setValue(combo.getItems().get(0)); }
-    private void populateLoanedBooksCombo(ComboBox<String> combo, Member member) { combo.getItems().clear(); if (member == null) return; for (BookLending lending : member.activeLoans) combo.getItems().add(lending.book.barcode + " — " + lending.book.title); if (!combo.getItems().isEmpty()) combo.setValue(combo.getItems().get(0)); }
+    private void populateMemberCombo(ComboBox<String> combo) {
+        combo.getItems().clear(); for (Member m : library.getMembers()) combo.getItems().add(m.getId() + " — " + m.getName());
+        if (!combo.getItems().isEmpty()) combo.setValue(combo.getItems().get(0)); }
+    private void populateAvailableBooksCombo(ComboBox<String> combo) {
+        combo.getItems().clear();
 
+        for (BookItem book : library.getCatalog().getAllBooks()) {
+
+            // Normal available books
+            if (book.status == BookStatus.AVAILABLE) {
+                combo.getItems().add(book.barcode + " — " + book.title);
+            }
+
+            // Reserved books ONLY for the member who reserved them
+            else if (book.status == BookStatus.RESERVED && currentUser instanceof Member member) {
+
+                boolean reservedByCurrentUser = member.activeReservations.stream()
+                        .anyMatch(r ->
+                                r.book == book &&
+                                        r.status == ReservationStatus.READY_FOR_PICKUP
+                        );
+
+                if (reservedByCurrentUser) {
+                    combo.getItems().add(book.barcode + " — " + book.title + " (Reserved for you)");
+                }
+            }
+        }
+
+        if (!combo.getItems().isEmpty()) {
+            combo.setValue(combo.getItems().get(0));
+        }
+    }    private void populateLoanedBooksCombo(ComboBox<String> combo, Member member) { combo.getItems().clear(); if (member == null) return; for (BookLending lending : member.activeLoans) combo.getItems().add(lending.book.barcode + " — " + lending.book.title); if (!combo.getItems().isEmpty()) combo.setValue(combo.getItems().get(0)); }
+
+
+
+    /** Builds the reservation table and reserve/cancel controls. */
     private ScrollPane buildReservationsPage() {
         boolean isLib = currentUser instanceof Librarian;
         VBox page = pageShell("Reservations", "Reserve unavailable books and manage waiting requests");
@@ -616,12 +789,18 @@ public class LibraryApp extends Application {
         HBox actions = new HBox(10, reserve, cancel, refresh); VBox card = cardBox(actions, table); VBox.setVgrow(table, Priority.ALWAYS); page.getChildren().add(card); return wrapPage(page);
     }
 
+    /** Reloads visible reservation records based on user role. */
     private void refreshReservationsTable(TableView<BookReservation> table, boolean isLib) {
         ObservableList<BookReservation> items = FXCollections.observableArrayList();
-        for (Member m : library.getMembers()) { if (!isLib && m != currentUser) continue; for (BookReservation r : m.activeReservations) if (r.status == ReservationStatus.WAITING || r.status == ReservationStatus.COMPLETED) items.add(r); }
+        for (Member m : library.getMembers()) { if (!isLib && m != currentUser) continue; for (BookReservation r : m.activeReservations) if (r.status == ReservationStatus.WAITING ||
+            r.status == ReservationStatus.READY_FOR_PICKUP ||
+            r.status == ReservationStatus.COMPLETED) items.add(r); }
         table.setItems(items);
     }
 
+
+
+    /** Opens the reservation dialog and prevents duplicate reservations. */
     private void showReserveDialog(boolean isLib) {
         List<BookItem> loanedBooks = new ArrayList<>();
         for (BookItem b : library.getCatalog().getAllBooks()) if (b.status == BookStatus.LOANED) loanedBooks.add(b);
@@ -640,7 +819,16 @@ public class LibraryApp extends Application {
             if (member.reserveBook(book)) { Notification.send(member.getName() + " reserved: " + book.title); alert("Reservation placed for: " + book.title); } else alert("Reservation failed.");
         });
     }
+    // ============================ END ZARINA ============================
 
+
+
+
+    // =========================================================================
+    // PERSON 6: RAMIZA CONTINUED
+    // GUI: Fines page and fine display.
+    // =========================================================================
+    /** Builds the fines table and total outstanding fine label. */
     private ScrollPane buildFinesPage() {
         boolean isLib = currentUser instanceof Librarian; VBox page = pageShell("Fines", "View overdue penalties and fine totals");
         TableView<BookLending> table = styledTable(); table.getColumns().addAll(col("Member", l -> l.member.getName()), col("Book", l -> l.book.title), col("Due Date", l -> SDF.format(l.dueDate)), col("Returned", l -> l.returnDate != null ? SDF.format(l.returnDate) : "Not returned"), col("Days Late", l -> String.valueOf(daysLate(l))), fineAmountCol());
@@ -650,8 +838,10 @@ public class LibraryApp extends Application {
         VBox card = cardBox(top, table); VBox.setVgrow(table, Priority.ALWAYS); page.getChildren().add(card); return wrapPage(page);
     }
 
+    /** Calculates how many days a book is late. */
     private long daysLate(BookLending lending) { Date check = lending.returnDate != null ? lending.returnDate : new Date(); if (!check.after(lending.dueDate)) return 0; long diff = check.getTime() - lending.dueDate.getTime(); long days = diff / (24 * 60 * 60 * 1000); return days == 0 ? 1 : days; }
 
+    /** Creates the fine amount table column. */
     private TableColumn<BookLending, String> fineAmountCol() {
         TableColumn<BookLending, String> column = new TableColumn<>("Fine");
         column.setCellValueFactory(cd -> { double fine = cd.getValue().calculateFine(); return new SimpleStringProperty(fine > 0 ? String.format("$%.2f", fine) : "—"); });
@@ -661,7 +851,16 @@ public class LibraryApp extends Application {
 
     private void refreshFinesTable(TableView<BookLending> table, boolean isLib) { List<BookLending> rows = new ArrayList<>(); for (BookLending l : library.getAllLendings()) { if (!isLib && l.member != currentUser) continue; if (l.calculateFine() > 0) rows.add(l); } table.setItems(FXCollections.observableArrayList(rows)); }
     private void updateFineTotal(Label label, boolean isLib) { double total = 0; for (BookLending l : library.getAllLendings()) { if (!isLib && l.member != currentUser) continue; total += l.calculateFine(); } label.setText(String.format("Outstanding fines: $%.2f", total)); label.setTextFill(total > 0 ? Color.web(C_RED) : Color.web(C_GREEN)); }
+    // ============================ END RAMIZA ============================
 
+
+
+    // =========================================================================
+    // PERSON 3: MARJONA
+    // Classes: Notification, EmailNotification, PostalNotification, Librarian, Member
+    // GUI: Notifications page and Member management page.
+    // =========================================================================
+    /** Builds notification/activity log page. */
     private ScrollPane buildNotificationsPage() {
         VBox page = pageShell("Notifications", "System activity and action history");
         TextArea area = new TextArea(); area.setEditable(false); area.setStyle("-fx-font-family: Consolas; -fx-font-size: 12px; -fx-background-color: white;"); refreshNotifications(area);
@@ -669,8 +868,10 @@ public class LibraryApp extends Application {
         HBox buttons = new HBox(10, refresh, clear); VBox card = cardBox(buttons, area); VBox.setVgrow(area, Priority.ALWAYS); page.getChildren().add(card); return wrapPage(page);
     }
 
+    /** Reloads notification messages from the Notification log. */
     private void refreshNotifications(TextArea area) { StringBuilder sb = new StringBuilder(); List<String> log = Notification.getLog(); for (int i = log.size() - 1; i >= 0; i--) sb.append(log.get(i)).append("\n"); area.setText(sb.toString()); }
 
+    /** Builds member management page for librarian. */
     private ScrollPane buildMembersPage() {
         VBox page = pageShell("Members", "Manage member accounts and account status");
         TableView<Member> table = styledTable(); table.getColumns().addAll(col("ID", m -> m.getId()), col("Name", m -> m.getName()), col("Email", m -> m.getEmail()), col("Phone", m -> m.getPhone()), memberStatusCol(), col("Books Out", m -> m.getTotalCheckedOutBooks() + "/" + Member.MAX_BOOKS_CHECKOUT)); refreshMembersTable(table);
@@ -681,14 +882,25 @@ public class LibraryApp extends Application {
         HBox actions = new HBox(10, block, unblock, delete); VBox card = cardBox(actions, table); VBox.setVgrow(table, Priority.ALWAYS); page.getChildren().add(card); return wrapPage(page);
     }
 
+    /** Creates colored account status badges for members. */
     private TableColumn<Member, String> memberStatusCol() {
         TableColumn<Member, String> column = new TableColumn<>("Status"); column.setCellValueFactory(cd -> new SimpleStringProperty(cd.getValue().getStatus().name()));
         column.setCellFactory(col -> new TableCell<Member, String>() { @Override protected void updateItem(String item, boolean empty) { super.updateItem(item, empty); if (empty || item == null) { setGraphic(null); setText(null); return; } Label badge = new Label(item); badge.setFont(Font.font("System", FontWeight.BOLD, 11)); badge.setTextFill(Color.WHITE); badge.setPadding(new Insets(3, 9, 3, 9)); String bg = "ACTIVE".equals(item) ? C_GREEN : C_RED; badge.setStyle("-fx-background-color: " + bg + "; -fx-background-radius: 20;"); setGraphic(badge); setText(null); } });
         return column;
     }
 
-    private void refreshMembersTable(TableView<Member> table) { table.setItems(FXCollections.observableArrayList(library.getMembers())); }
 
+    private void refreshMembersTable(TableView<Member> table) {
+        table.setItems(FXCollections.observableArrayList(library.getMembers()));
+    }
+    // ========================= MARJONA CONTINUES LATER =========================
+
+
+    // =========================================================================
+    // PERSON 4: FERUZA CONTINUED
+    // GUI: My Account page and helper find methods.
+    // =========================================================================
+    /** Builds member profile page with library card and active loans. */
     private ScrollPane buildMyAccountPage(Member member) {
         VBox page = pageShell("My Account", "Library card, membership details and active loans");
         VBox profile = cardBox(); profile.setMaxWidth(420); profile.setAlignment(Pos.TOP_CENTER);
@@ -703,7 +915,16 @@ public class LibraryApp extends Application {
     private BookItem findBookByBarcode(String barcode) { return library.getCatalog().getAllBooks().stream().filter(b -> b.barcode.equals(barcode)).findFirst().orElse(null); }
     private Member findMemberById(String id) { return library.getMembers().stream().filter(m -> m.getId().equals(id)).findFirst().orElse(null); }
     private List<BookLending> visibleLendings(boolean isLib) { List<BookLending> result = new ArrayList<>(); for (BookLending l : library.getAllLendings()) { if (!isLib && l.member != currentUser) continue; result.add(l); } return result; }
+    // ============================ END FERUZA ============================
 
+
+
+
+
+    // =========================================================================
+    // PERSON 3: MARJONA CONTINUED
+    // GUI: Shared UI helper methods used by all pages.
+    // =========================================================================
     private VBox pageShell(String title, String subtitle)
     { VBox page = new VBox(18);
         page.setPadding(new Insets(28));
@@ -759,6 +980,8 @@ public class LibraryApp extends Application {
     private void errLabel(Label label, String message) { label.setText(message); label.setTextFill(Color.web(C_RED)); }
     private void okLabel(Label label, String message) { label.setText(message); label.setTextFill(Color.web(C_GREEN)); }
     private void alert(String message) { Alert alert = new Alert(Alert.AlertType.INFORMATION, message, ButtonType.OK); alert.setHeaderText(null); alert.getDialogPane().setStyle("-fx-background-color: " + C_BG + ";"); alert.showAndWait(); }
-
-    public static void main(String[] args) { launch(args); }
+    // ============================ END MARJONA ============================
+    public static void main(String[] args) {
+        launch(args);
+    }
 }

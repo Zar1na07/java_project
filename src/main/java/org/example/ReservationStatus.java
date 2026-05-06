@@ -2,7 +2,7 @@ package org.example;
 
 enum ReservationStatus {
     WAITING,
-    PENDING,
+    READY_FOR_PICKUP,
     COMPLETED,
     CANCELED
 }
